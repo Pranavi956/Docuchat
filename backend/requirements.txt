@@ -1,0 +1,28 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.17
+python-dotenv==1.0.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# Database
+asyncpg==0.30.0
+sqlalchemy[asyncio]==2.0.36
+psycopg2-binary==2.9.10
+
+# AI / Embeddings
+google-generativeai==0.8.3
+
+# PDF Processing
+pypdf==5.1.0
+pdfplumber==0.11.4
+
+# Supabase
+supabase==2.10.0
+
+# Auth (Clerk JWT verification)
+python-jose[cryptography]==3.3.0
+httpx>=0.26,<0.28
+
+# Utils
+tenacity==9.0.0

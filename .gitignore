@@ -11,7 +11,6 @@ frontend/.next/
 frontend/.env.local
 
 # Keys / secrets
-*.txt
 keys.txt
 GEMINI\ API.txt
 
