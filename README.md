@@ -1,6 +1,8 @@
 # DocuChat — AI Document Q&A SaaS
 
-Upload PDFs and chat with them using AI. Built with Next.js 14, FastAPI, pgvector, and Gemini 2.0 Flash.
+Upload PDFs and chat with them using AI. Built with Next.js 14, FastAPI, pgvector, and Gemini 2.5 Flash.
+
+**Live demo**: [docuchat-plum.vercel.app](https://docuchat-plum.vercel.app)
 
 ## Architecture
 
@@ -17,7 +19,7 @@ Upload PDFs and chat with them using AI. Built with Next.js 14, FastAPI, pgvecto
 
 - **Auth**: Sign up / sign in via Clerk
 - **PDF Upload**: Drag & drop, up to 50MB
-- **RAG Pipeline**: Extract → Chunk → Embed (text-embedding-004) → Store in pgvector
+- **RAG Pipeline**: Extract → Chunk → Embed (gemini-embedding-001) → Store in pgvector
 - **Streaming Chat**: Real-time responses via Server-Sent Events
 - **Source Citations**: See which pages/sections were used to answer
 - **Conversation History**: Persisted per document
@@ -46,8 +48,7 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
 CLERK_SECRET_KEY=sk_...
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/documents
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/documents
+NEXT_PUBLIC_CLERK_FALLBACK_REDIRECT_URL=/documents
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
@@ -57,8 +58,9 @@ GEMINI_API_KEY=...
 SUPABASE_URL=https://[project].supabase.co
 SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
-DATABASE_URL=postgresql+asyncpg://postgres:[password]@db.[project].supabase.co:5432/postgres
 CLERK_SECRET_KEY=sk_...
+CLERK_PUBLISHABLE_KEY=pk_...
+FRONTEND_URL=http://localhost:3000
 ```
 
 ### 3. Set up Supabase
@@ -75,7 +77,6 @@ CLERK_SECRET_KEY=sk_...
 
 1. Create a Clerk app at [clerk.com](https://clerk.com)
 2. Copy the publishable key and secret key to the env files
-3. In Clerk Dashboard → JWT Templates, create a template named `default` (or use the default)
 
 ### 5. Set up Gemini API
 
@@ -124,16 +125,16 @@ docuchat/
 │   │   │   └── chat.py         # Streaming chat + history endpoints
 │   │   ├── core/
 │   │   │   ├── config.py       # Pydantic settings
-│   │   │   ├── database.py     # SQLAlchemy async engine
+│   │   │   ├── database.py     # Supabase REST client
 │   │   │   └── auth.py         # Clerk JWT verification
 │   │   ├── models/schemas.py   # Pydantic models
 │   │   ├── services/
 │   │   │   ├── pdf_processor.py  # Text extraction + chunking
-│   │   │   ├── embeddings.py     # Gemini text-embedding-004
+│   │   │   ├── embeddings.py     # Gemini gemini-embedding-001 (768d)
 │   │   │   ├── vector_store.py   # pgvector similarity search
-│   │   │   └── chat_service.py   # Gemini 2.0 Flash streaming
+│   │   │   └── chat_service.py   # Gemini 2.5 Flash streaming
 │   │   └── main.py
-│   └── migrations/init.sql     # pgvector schema
+│   └── migrations/init.sql     # pgvector schema + match_chunks RPC
 │
 └── README.md
 ```
@@ -143,10 +144,10 @@ docuchat/
 1. **Upload**: PDF → Supabase Storage
 2. **Extract**: pdfplumber → plain text
 3. **Chunk**: Sliding window (1000 chars, 200 overlap)
-4. **Embed**: Google `text-embedding-004` (768 dimensions)
+4. **Embed**: `gemini-embedding-001` (768 dimensions)
 5. **Store**: pgvector `document_chunks` table
-6. **Query**: Cosine similarity search → top-5 chunks
-7. **Generate**: Gemini 2.0 Flash with context + streaming SSE
+6. **Query**: Cosine similarity search → top-5 chunks via `match_chunks` RPC
+7. **Generate**: Gemini 2.5 Flash with context + streaming SSE
 
 ## API Endpoints
 
@@ -162,9 +163,8 @@ docuchat/
 
 ## Production Deployment
 
-- **Frontend**: Deploy to Vercel — set env vars in project settings
-- **Backend**: Deploy to Railway or Render — set env vars, expose port 8000
-- Update `FRONTEND_URL` in backend env and `NEXT_PUBLIC_API_URL` in frontend env with production URLs
+- **Frontend**: Vercel — set env vars in project settings, set `NEXT_PUBLIC_API_URL` to your backend URL
+- **Backend**: Render — set env vars, set `FRONTEND_URL` to your Vercel URL
 - After inserting significant data, create the IVFFlat index for faster vector search:
   ```sql
   CREATE INDEX idx_chunks_embedding ON document_chunks 
